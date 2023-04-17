@@ -1,8 +1,8 @@
 {
     "methodProperties": [
         {
-            "methodName": "isToggleDisabled",
-            "flagType": "control",
+            "methodName": "hasFeatureFlag",
+            "flagType": "treated",
             "argumentIndex": 0
         },
         {

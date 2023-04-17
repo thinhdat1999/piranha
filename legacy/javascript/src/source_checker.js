@@ -27,15 +27,38 @@
  */
 
 const fs = require('fs');
+const path = require('path');
+
+const regx = /[jt]sx?$/;
+
+const fetchAllFilesFromGivenFolder = (fullPath) => {
+    let files = [];
+    fs.readdirSync(fullPath).forEach((file) => {
+        const absolutePath = path.join(fullPath, file);
+        if (fs.statSync(absolutePath).isDirectory()) {
+            const filesFromNestedFolder = fetchAllFilesFromGivenFolder(absolutePath);
+            filesFromNestedFolder.forEach((file) => {
+                files.push(file);
+            });
+        } else {
+            return files.push(absolutePath);
+        }
+    });
+    return files;
+};
 
 module.exports = {
     checkSource: function (source_file) {
         if (!fs.existsSync(source_file)) {
             throw new Error(`File ${source_file} not found`);
-        } else if (source_file.split('.').slice(-1)[0] != 'js') {
+        } else if (source_file.split('.').length > 2 || !regx.test(source_file.split('.').slice(-1)[0])) {
             throw new Error(`Input ${source_file} is not a javascript file`);
         }
 
         return source_file;
+    },
+    getFiles: function (source_file) {
+        const files = fetchAllFilesFromGivenFolder(source_file);
+        return files;
     },
 };

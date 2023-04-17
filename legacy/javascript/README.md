@@ -149,8 +149,8 @@ It can be convenient to run piranha as a shell command from any location. This c
 From the `piranha/javascript` directory, run the following shell commands (for the bash shell).
 
 ```
-printf "alias piranhajs='node `realpath src/piranha.js`'" >> ~/.bashrc
-source ~/.bashrc
+printf "alias piranhajs='node `realpath src/piranha.js`'" >> ~/.bashrc  or ~/.zshrc 
+source ~/.bashrc or ~/.zshrc
 ```
 
 Other shells have similar commands. Macs don't come preinstalled with the `realpath` utility. One way is to create an alias for `realpath` and run above commands.
@@ -161,3 +161,9 @@ Another way is to install `coreutils` which contains `realpath` using `brew`. Ma
 ```
 brew install coreutils
 ``` 
+
+Command
+
+```
+piranhajs -p properties.json --treated -f "featureFlag" -s app/modules/workflow/
+```

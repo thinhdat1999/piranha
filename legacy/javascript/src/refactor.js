@@ -43,6 +43,7 @@
 var estraverse = require('estraverse'); // Convenient API for AST traversal
 const winston = require('winston'); // logger
 const colors = require('colors');
+const jsxKeys = require('./utils/estraverseJSXKeys');
 
 class RefactorEngine {
     constructor(
@@ -330,7 +331,7 @@ class RefactorEngine {
                             case 'Identifier':
                                 nodeArgumentIsFlag = nodeArgument.name === engine.flagname;
                                 break;
-                            case 'Literal':
+                            case 'StringLiteral':
                                 nodeArgumentIsFlag = nodeArgument.value === engine.flagname;
                                 break;
                         }
@@ -350,6 +351,7 @@ class RefactorEngine {
                     }
                 }
             },
+            keys: jsxKeys,
 
             fallback: 'iteration', // Ignore nodes in the AST that estraverse does not recognize
         });
@@ -391,7 +393,7 @@ class RefactorEngine {
                     }
                 }
             },
-
+            keys: jsxKeys,
             fallback: 'iteration',
         });
     }
@@ -427,7 +429,7 @@ class RefactorEngine {
                     }
                 }
             },
-
+            keys: jsxKeys,
             fallback: 'iteration',
         });
 
@@ -440,6 +442,8 @@ class RefactorEngine {
                     parent.body.splice(nodeIndex, 1, ...node.body);
                 }
             },
+            keys: jsxKeys,
+            fallback: 'iteration',
         });
     }
 
@@ -471,6 +475,7 @@ class RefactorEngine {
                     }
                 }
             },
+            keys: jsxKeys,
 
             fallback: 'iteration',
         });
@@ -520,6 +525,7 @@ class RefactorEngine {
                     }
                 }
             },
+            keys: jsxKeys,
 
             fallback: 'iteration',
         });
@@ -536,16 +542,16 @@ class RefactorEngine {
         estraverse.traverse(this.ast, {
             enter: function (node, parent) {
                 if (node.type === 'FunctionDeclaration') {
-                    current = node.id.name;
+                    current = node?.id?.name;
                     numReturns[current] = 0;
                 } else if (node.type === 'FunctionExpression') {
                     if (parent.type === 'VariableDeclarator') {
-                        current = parent.id.name;
+                        current = parent?.id?.name;
                         numReturns[current] = 0;
                     }
                 } else if (node.type === 'ArrowFunctionExpression') {
                     if (parent.type === 'VariableDeclarator') {
-                        current = parent.id.name;
+                        current = parent?.id?.name;
 
                         if (node.body.type !== 'BlockStatement') {
                             numReturns[current] = 1;
@@ -557,6 +563,7 @@ class RefactorEngine {
                     numReturns[current]++;
                 }
             },
+            keys: jsxKeys,
 
             fallback: 'iteration',
         });
@@ -579,30 +586,31 @@ class RefactorEngine {
 
         estraverse.traverse(this.ast, {
             enter: function (node, parent) {
-                if (node.type === 'FunctionDeclaration' && singleReturnFunctions[node.id.name]) {
-                    if (!engine.checkAndAddRedundantFunction(node, node.id.name, redundantFunctions)) {
+                if (node.type === 'FunctionDeclaration' && singleReturnFunctions[node?.id?.name]) {
+                    if (!engine.checkAndAddRedundantFunction(node, node?.id?.name, redundantFunctions)) {
                         this.skip();
                     }
                 } else if (node.type === 'FunctionExpression') {
-                    if (parent.type === 'VariableDeclarator' && singleReturnFunctions[parent.id.name]) {
-                        if (!engine.checkAndAddRedundantFunction(node, parent.id.name, redundantFunctions)) {
+                    if (parent.type === 'VariableDeclarator' && singleReturnFunctions[parent?.id?.name]) {
+                        if (!engine.checkAndAddRedundantFunction(node, parent?.id?.name, redundantFunctions)) {
                             this.skip();
                         }
                     }
                 } else if (node.type === 'ArrowFunctionExpression') {
-                    if (parent.type === 'VariableDeclarator' && singleReturnFunctions[parent.id.name] !== undefined) {
+                    if (parent.type === 'VariableDeclarator' && singleReturnFunctions[parent?.id?.name] !== undefined) {
                         if (node.body.type !== 'BlockStatement') {
                             if (engine.isPiranhaLiteral(node.body) && typeof node.body.value === 'boolean') {
-                                redundantFunctions[parent.id.name] = node.body.value;
+                                redundantFunctions[parent?.id?.name] = node.body.value;
                             }
                         } else {
-                            if (!engine.checkAndAddRedundantFunction(node, parent.id.name, redundantFunctions)) {
+                            if (!engine.checkAndAddRedundantFunction(node, parent?.id?.name, redundantFunctions)) {
                                 this.skip();
                             }
                         }
                     }
                 }
             },
+            keys: jsxKeys,
 
             fallback: 'iteration',
         });
@@ -617,14 +625,14 @@ class RefactorEngine {
 
         estraverse.replace(this.ast, {
             enter: function (node, parent) {
-                if (node.type === 'FunctionDeclaration' && node.id.name in pruneList) {
+                if (node.type === 'FunctionDeclaration' && node?.id?.name in pruneList) {
                     if (engine.keep_comments) {
                         engine.moveAllCommentsToSiblings(node, parent);
                     }
 
                     engine.changed = true;
                     this.remove();
-                } else if (node.type === 'VariableDeclarator' && node.id.name in pruneList) {
+                } else if (node.type === 'VariableDeclarator' && node?.id?.name in pruneList) {
                     engine.changed = true;
                     this.remove();
                 } else if (node.type === 'CallExpression' && node.callee.name in pruneList) {
@@ -645,6 +653,7 @@ class RefactorEngine {
                     this.remove();
                 }
             },
+            keys: jsxKeys,
 
             fallback: 'iteration',
         });
@@ -662,6 +671,8 @@ class RefactorEngine {
                     delete node.createdByPiranha;
                 }
             },
+            keys: jsxKeys,
+            fallback: 'iteration',
         });
     }
 

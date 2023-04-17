@@ -26,6 +26,7 @@ const max_iters = 15;
 const config_checker = require('./config_checker'); // Error-checking for the properties file
 const source_checker = require('./source_checker');
 const process = require('process');
+const eol = require('os').EOL;
 
 // By default argparse prints all args under 'optional arguments'
 // A new argument group is needed to print required args separately
@@ -78,62 +79,74 @@ parser.addArgument(['-c', '--keep_comments'], {
 const args = parser.parseArgs();
 const flagname = args.flag;
 
-let filename, properties;
+let filename, properties, files;
 
 try {
-    filename = source_checker.checkSource(args.source);
-    properties = config_checker.parseProperties(args.properties);
+    files = source_checker.getFiles(args.source);
+    files.forEach((filePath) => {
+        try {
+            filename = source_checker.checkSource(filePath);
+            properties = config_checker.parseProperties(args.properties);
+        } catch (err) {
+            console.log(colors.red(err.message));
+            return;
+        }
+
+        var max_cleanup_steps = max_iters;
+        if (args.max_cleanup_steps != null) {
+            max_cleanup_steps = args.max_cleanup_steps;
+        }
+
+        var behaviour = args.treated != null;
+
+        const timestamp = Date.now();
+
+        if (args.debug != null) {
+            refactor.logger.add(
+                new winston.transports.File({
+                    filename: `error_${timestamp}.log`,
+                    level: 'error',
+                }),
+            );
+
+            refactor.logger.add(new winston.transports.File({ filename: `combined_${timestamp}.log` }));
+        }
+
+        const keep_comments = args.keep_comments != null;
+
+        const ast = recast.parse(fs.readFileSync(filename, 'utf-8'), {
+            parser: require('recast/parsers/babel-ts'),
+            arrowParensAlways: false,
+        }).program;
+
+        const engine = new refactor.RefactorEngine(
+            ast,
+            properties,
+            behaviour,
+            flagname,
+            max_cleanup_steps,
+            true,
+            keep_comments,
+            filename,
+        );
+        engine.refactorPipeline();
+
+        var out_file = args.output;
+
+        // Default behavior is to modify in-place
+        if (out_file === '') {
+            out_file = filename;
+        }
+
+        fs.writeFile(out_file, recast.print(ast).code + eol, function (err) {
+            if (err) {
+                console.log('writeFile err');
+                return console.log(err);
+            }
+            console.log(`Output written to ${out_file}`);
+        });
+    });
 } catch (err) {
-    console.log(colors.red(err.message));
+    console.log(colors.red(err));
     process.exit(1);
 }
-
-var max_cleanup_steps = max_iters;
-if (args.max_cleanup_steps != null) {
-    max_cleanup_steps = args.max_cleanup_steps;
-}
-
-var behaviour = args.treated != null;
-
-const timestamp = Date.now();
-
-if (args.debug != null) {
-    refactor.logger.add(
-        new winston.transports.File({
-            filename: `error_${timestamp}.log`,
-            level: 'error',
-        }),
-    );
-
-    refactor.logger.add(new winston.transports.File({ filename: `combined_${timestamp}.log` }));
-}
-
-const keep_comments = args.keep_comments != null;
-
-const ast = recast.parse(fs.readFileSync(filename, 'utf-8')).program;
-
-const engine = new refactor.RefactorEngine(
-    ast,
-    properties,
-    behaviour,
-    flagname,
-    max_cleanup_steps,
-    true,
-    keep_comments,
-    filename,
-);
-engine.refactorPipeline();
-
-var out_file = args.output;
-
-// Default behavior is to modify in-place
-if (out_file === '') {
-    out_file = filename;
-}
-
-fs.writeFile(out_file, recast.print(ast).code, function (err) {
-    if (err) {
-        return console.log(err);
-    }
-    console.log(`Output written to ${out_file}`);
-});
