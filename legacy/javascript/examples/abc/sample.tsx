@@ -54,3 +54,6 @@ var c = isToggleDisabled(featureFlag)
       ? f3()
       : f4();
 
+if (!test1 && !test2 && !test3 && !hasFeatureFlag('test')) {
+  f1();
+}

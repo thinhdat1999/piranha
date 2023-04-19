@@ -27,6 +27,8 @@ const config_checker = require('./config_checker'); // Error-checking for the pr
 const source_checker = require('./source_checker');
 const process = require('process');
 const eol = require('os').EOL;
+const prettierEslint = require('prettier-eslint');
+const path = require('path');
 
 // By default argparse prints all args under 'optional arguments'
 // A new argument group is needed to print required args separately
@@ -83,7 +85,7 @@ let filename, properties, files;
 
 try {
     files = source_checker.getFiles(args.source);
-    files.forEach((filePath) => {
+    files.forEach(async (filePath) => {
         try {
             filename = source_checker.checkSource(filePath);
             properties = config_checker.parseProperties(args.properties);
@@ -116,7 +118,6 @@ try {
 
         const ast = recast.parse(fs.readFileSync(filename, 'utf-8'), {
             parser: require('recast/parsers/babel-ts'),
-            arrowParensAlways: false,
         }).program;
 
         const engine = new refactor.RefactorEngine(
@@ -129,22 +130,33 @@ try {
             keep_comments,
             filename,
         );
-        engine.refactorPipeline();
+        const shouldChange = engine.refactorPipeline();
 
-        var out_file = args.output;
+        if (shouldChange) {
+            var out_file = args.output;
 
-        // Default behavior is to modify in-place
-        if (out_file === '') {
-            out_file = filename;
-        }
-
-        fs.writeFile(out_file, recast.print(ast).code + eol, function (err) {
-            if (err) {
-                console.log('writeFile err');
-                return console.log(err);
+            // Default behavior is to modify in-place
+            if (out_file === '') {
+                out_file = filename;
             }
-            console.log(`Output written to ${out_file}`);
-        });
+
+            const filePath = path.resolve(out_file);
+            const code = recast.print(ast).code;
+
+            const formatOptions = {
+                text: code,
+                filePath: filePath,
+            };
+            const formatted = await prettierEslint(formatOptions);
+
+            fs.writeFile(out_file, formatted, function (err) {
+                if (err) {
+                    console.log('writeFile err');
+                    return console.log(err);
+                }
+                console.log(`Output written to ${out_file}`);
+            });
+        }
     });
 } catch (err) {
     console.log(colors.red(err));
