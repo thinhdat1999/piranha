@@ -167,3 +167,6 @@ Command
 ```
 piranhajs -p properties.json --treated -f "featureFlag" -s app/modules/workflow/
 ```
+
+
+![image](https://user-images.githubusercontent.com/32608183/234791526-3c6b25c9-a1e6-4100-8b9f-420f08369596.png)
