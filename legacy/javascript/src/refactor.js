@@ -512,6 +512,23 @@ class RefactorEngine {
                             return engine.falseLiteral();
                         }
                     }
+                } else if (node.type === 'JSXExpressionContainer' && parent.type !== 'JSXAttribute') {
+                    if (engine.isPiranhaLiteral(node.expression)) {
+                        engine.changed = true;
+                        return this.remove();
+                    } else if (node.expression.type && ['JSXElement', 'JSXFragment'].includes(node.expression.type)) {
+                        engine.changed = true;
+
+                        // remove parenthesize
+                        if (node.expression.extra && node.expression.extra.parenthesized) {
+                            Object.assign(node.expression, {
+                                ...node.expression,
+                                extra: {},
+                            });
+                        }
+
+                        return node.expression;
+                    }
                 }
             },
 

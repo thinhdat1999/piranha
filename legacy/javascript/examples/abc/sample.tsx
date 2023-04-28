@@ -57,3 +57,21 @@ var c = isToggleDisabled(featureFlag)
 if (!test1 && !test2 && !test3 && !hasFeatureFlag('test')) {
   f1();
 }
+
+
+const Test = () => {
+  return (
+    <>
+      {hasFeatureFlag('test') && <><View1/> {!hasFeatureFlag('test') ? <View5/> : <View6/>}</>}
+      {hasFeatureFlag('test') && hasFeatureFlag('test2') && <><View1/> {!hasFeatureFlag('test') ? <View5/> : <View6/>}</>}
+
+      {!hasFeatureFlag('test') && <View2/>}
+      {hasFeatureFlag('test') ? (<><View3/></>) : (<><View4/></>) }
+      <View
+        attribute={hasFeatureFlag('test') && <View><Text>abc</Text></View>}
+        attribute2={hasFeatureFlag('test') && ab && c()}
+        attribute3={hasFeatureFlag('test') ? a : b}
+      />
+    </>
+  )
+}

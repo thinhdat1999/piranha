@@ -83,80 +83,84 @@ const flagname = args.flag;
 
 let filename, properties, files;
 
+async function refactorFile(filePath) {
+    try {
+        filename = source_checker.checkSource(filePath);
+        properties = config_checker.parseProperties(args.properties);
+    } catch (err) {
+        console.log(colors.red(err.message));
+        return;
+    }
+
+    var max_cleanup_steps = max_iters;
+    if (args.max_cleanup_steps != null) {
+        max_cleanup_steps = args.max_cleanup_steps;
+    }
+
+    var behaviour = args.treated != null;
+
+    const timestamp = Date.now();
+
+    if (args.debug != null) {
+        refactor.logger.add(
+            new winston.transports.File({
+                filename: `error_${timestamp}.log`,
+                level: 'error',
+            }),
+        );
+
+        refactor.logger.add(new winston.transports.File({ filename: `combined_${timestamp}.log` }));
+    }
+
+    const keep_comments = args.keep_comments != null;
+
+    const ast = recast.parse(fs.readFileSync(filename, 'utf-8'), {
+        parser: require('recast/parsers/babel-ts'),
+    }).program;
+
+    const engine = new refactor.RefactorEngine(
+        ast,
+        properties,
+        behaviour,
+        flagname,
+        max_cleanup_steps,
+        true,
+        keep_comments,
+        filename,
+    );
+    const shouldChange = engine.refactorPipeline();
+
+    if (shouldChange) {
+        var out_file = args.output;
+
+        // Default behavior is to modify in-place
+        if (out_file === '') {
+            out_file = filename;
+        }
+
+        const filePath = path.resolve(out_file);
+        const code = recast.print(ast).code;
+
+        const formatOptions = {
+            text: code,
+            filePath: filePath,
+        };
+        const formatted = await prettierEslint(formatOptions);
+
+        fs.writeFile(out_file, formatted, function (err) {
+            if (err) {
+                console.log('writeFile err');
+                return console.log(err);
+            }
+            console.log(`Output written to ${out_file}`);
+        });
+    }
+}
+
 try {
     files = source_checker.getFiles(args.source);
     files.forEach(async (filePath) => {
-        try {
-            filename = source_checker.checkSource(filePath);
-            properties = config_checker.parseProperties(args.properties);
-        } catch (err) {
-            console.log(colors.red(err.message));
-            return;
-        }
-
-        var max_cleanup_steps = max_iters;
-        if (args.max_cleanup_steps != null) {
-            max_cleanup_steps = args.max_cleanup_steps;
-        }
-
-        var behaviour = args.treated != null;
-
-        const timestamp = Date.now();
-
-        if (args.debug != null) {
-            refactor.logger.add(
-                new winston.transports.File({
-                    filename: `error_${timestamp}.log`,
-                    level: 'error',
-                }),
-            );
-
-            refactor.logger.add(new winston.transports.File({ filename: `combined_${timestamp}.log` }));
-        }
-
-        const keep_comments = args.keep_comments != null;
-
-        const ast = recast.parse(fs.readFileSync(filename, 'utf-8'), {
-            parser: require('recast/parsers/babel-ts'),
-        }).program;
-
-        const engine = new refactor.RefactorEngine(
-            ast,
-            properties,
-            behaviour,
-            flagname,
-            max_cleanup_steps,
-            true,
-            keep_comments,
-            filename,
-        );
-        const shouldChange = engine.refactorPipeline();
-
-        if (shouldChange) {
-            var out_file = args.output;
-
-            // Default behavior is to modify in-place
-            if (out_file === '') {
-                out_file = filename;
-            }
-
-            const filePath = path.resolve(out_file);
-            const code = recast.print(ast).code;
-
-            const formatOptions = {
-                text: code,
-                filePath: filePath,
-            };
-            const formatted = await prettierEslint(formatOptions);
-
-            fs.writeFile(out_file, formatted, function (err) {
-                if (err) {
-                    console.log('writeFile err');
-                    return console.log(err);
-                }
-                console.log(`Output written to ${out_file}`);
-            });
-        }
+        await refactorFile(filePath);
     });
 } catch (err) {
     console.log(colors.red(err));

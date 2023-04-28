@@ -33,17 +33,23 @@ const regx = /[jt]sx?$/;
 
 const fetchAllFilesFromGivenFolder = (fullPath) => {
     let files = [];
-    fs.readdirSync(fullPath).forEach((file) => {
-        const absolutePath = path.join(fullPath, file);
-        if (fs.statSync(absolutePath).isDirectory()) {
-            const filesFromNestedFolder = fetchAllFilesFromGivenFolder(absolutePath);
-            filesFromNestedFolder.forEach((file) => {
-                files.push(file);
-            });
-        } else {
-            return files.push(absolutePath);
-        }
-    });
+
+    //Check if filepath or directory path then return filepath or all filepath in directory.
+    if (fs.lstatSync(fullPath).isDirectory()) {
+        fs.readdirSync(fullPath).forEach((file) => {
+            const absolutePath = path.join(fullPath, file);
+            if (fs.statSync(absolutePath).isDirectory()) {
+                const filesFromNestedFolder = fetchAllFilesFromGivenFolder(absolutePath);
+                filesFromNestedFolder.forEach((file) => {
+                    files.push(file);
+                });
+            } else {
+                return files.push(absolutePath);
+            }
+        });
+    } else {
+        files.push(fullPath);
+    }
     return files;
 };
 
