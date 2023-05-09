@@ -19,14 +19,13 @@ const fs = require('fs'); // Read and write files
 const recast = require('recast'); // Parser
 const colors = require('colors'); // Print error in red
 const ArgumentParser = require('argparse').ArgumentParser; // Parses command-line arguments
-const winston = require('winston'); // Logger
+// const winston = require('winston'); // Logger
 const parser = new ArgumentParser({ addHelp: true });
 // Large but finite number so that a fixed point is realised but the program doesn't go into an infinite loop in case of a bug
 const max_iters = 15;
 const config_checker = require('./config_checker'); // Error-checking for the properties file
 const source_checker = require('./source_checker');
 const process = require('process');
-const eol = require('os').EOL;
 const prettierEslint = require('prettier-eslint');
 const path = require('path');
 
@@ -65,13 +64,10 @@ parser.addArgument(['-n', '--max_cleanup_steps'], {
 });
 
 // TODO implement logging functionality
-// parser.addArgument(
-//     ["-d", "--debug"],
-//     {
-//         help: "Log debugging output; Default is false",
-//         nargs: 'OPTIONAL',
-//     }
-// );
+parser.addArgument(['-d', '--debug'], {
+    help: 'Log debugging output; Default is false',
+    nargs: 'OPTIONAL',
+});
 
 parser.addArgument(['-c', '--keep_comments'], {
     help: 'To keep all comments',
@@ -83,12 +79,14 @@ const flagname = args.flag;
 
 let filename, properties, files;
 
+const DEBUG = args.debug !== null;
+
 async function refactorFile(filePath) {
     try {
         filename = source_checker.checkSource(filePath);
         properties = config_checker.parseProperties(args.properties);
     } catch (err) {
-        console.log(colors.red(err.message));
+        DEBUG && console.log(colors.red(err.message));
         return;
     }
 
@@ -99,18 +97,18 @@ async function refactorFile(filePath) {
 
     var behaviour = args.treated != null;
 
-    const timestamp = Date.now();
+    // const timestamp = Date.now();
 
-    if (args.debug != null) {
-        refactor.logger.add(
-            new winston.transports.File({
-                filename: `error_${timestamp}.log`,
-                level: 'error',
-            }),
-        );
-
-        refactor.logger.add(new winston.transports.File({ filename: `combined_${timestamp}.log` }));
-    }
+    // if (DEBUG) {
+    //     refactor.logger.add(
+    //         new winston.transports.File({
+    //             filename: `error_${timestamp}.log`,
+    //             level: 'error',
+    //         }),
+    //     );
+    //
+    //     refactor.logger.add(new winston.transports.File({ filename: `combined_${timestamp}.log` }));
+    // }
 
     const keep_comments = args.keep_comments != null;
 
@@ -124,7 +122,7 @@ async function refactorFile(filePath) {
         behaviour,
         flagname,
         max_cleanup_steps,
-        true,
+        DEBUG,
         keep_comments,
         filename,
     );

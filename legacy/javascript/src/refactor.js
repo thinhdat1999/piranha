@@ -726,12 +726,10 @@ class RefactorEngine {
                             `Piranha did not make any changes to ${this.filename} to cleanup ${this.flagname}`,
                         ),
                     );
-                    return false;
                 } else {
                     console.log(
                         `Took ${iterations} ${iterations == 1 ? 'pass' : 'passes'} over the code to reach fixed point.`,
                     );
-                    return true;
                 }
             } else {
                 console.log(
@@ -739,9 +737,17 @@ class RefactorEngine {
                         iterations == 1 ? 'pass' : 'passes'
                     } over the code.`,
                 );
-                return false;
             }
         }
+
+        if (!this.changed) {
+            if (iterations == 1 && this.max_cleanup_steps != 1) {
+                return false;
+            } else {
+                return true;
+            }
+        }
+
         return false;
     }
 }
