@@ -338,6 +338,7 @@ class RefactorEngine {
                         if (nodeArgumentIsFlag) {
                             const flagType = methodHashMap.get(node.callee.name).flagType;
                             engine.changed = true;
+                            engine.fileContainFlag = true;
 
                             if (
                                 (flagType === 'treated' && engine.behaviour) ||
@@ -697,6 +698,7 @@ class RefactorEngine {
     refactorPipeline() {
         var iterations = 0;
         this.changed = true;
+        this.fileContainFlag = false;
 
         this.flagAPIToLiteral();
 
@@ -740,15 +742,7 @@ class RefactorEngine {
             }
         }
 
-        if (!this.changed) {
-            if (iterations == 1 && this.max_cleanup_steps != 1) {
-                return false;
-            } else {
-                return true;
-            }
-        }
-
-        return false;
+        return !this.changed && this.fileContainFlag;
     }
 }
 
